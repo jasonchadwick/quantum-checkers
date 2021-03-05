@@ -73,6 +73,8 @@ def measure(val0, val1):
     return rolls
 
 def measure_board(board):
+    # TODO: each piece has its own prob. distribution. This will ensure conservation
+    # of pieces if they have not been jumped. Will be a big rewrite process.
     size = len(board[0])
     for r in range(size):
         for c in range(size):
@@ -89,7 +91,7 @@ def player_move(board, player):
         else:
             print(f'{Fore.RED}Player ' + str(player) + f'\'s turn.{Style.RESET_ALL}')
 
-        print('Move format ex: a1 b3 jumps from A1 to B3')
+        print('Move format ex: \"a1 b3\" jumps from A1 to B3')
         move1 = input('Input move (p to pass, m to measure): ')
         
         if move1 == 'p':
@@ -102,7 +104,6 @@ def player_move(board, player):
         r1 = ord(move1[0]) - 97
         c1 = int(move1[1]) - 1
 
-        #move2 = input('Destination: ')
         r2 = ord(move1[3]) - 97
         c2 = int(move1[4]) - 1
 
@@ -138,8 +139,6 @@ def player_move(board, player):
             b[r2][c2] = prob_jump * src + dst
             b[r1][c1] = (1-prob_jump) * src
             b1[jmp[0]][jmp[1]] = (1-prob_jump) * b1[jmp[0]][jmp[1]]
-
-    #return board
 
 def score_board(b):
     s0 = round(sum([sum(r) for r in b[0]]), 2)
