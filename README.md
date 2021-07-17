@@ -6,7 +6,8 @@ The winner is the first to drop their opponent's total probability score below 1
 
 ### Todo
 
-- each piece is separate, instead of all your pieces being a single probability distribution
+- entanglement instead of expected values
+    - how to do this without exponentially-growing space requirements??
 - AI to play against
 - UI
     - pie chart representation of each probability?
