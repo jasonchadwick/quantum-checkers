@@ -37,55 +37,11 @@ total possible "board-states" (ex: 2 qudits of 3 states each can represent the f
 
 board indexing (size=3):
 
-       07
-    18    08
- 17    01    09
-    06    02
- 16    00    10
-    05    03
- 15    04    11
-    14    12
-       13
-
-how to get to this encoding???
-
-Square board - just "take off" the corners..?
-3x3: nrows = 1 + 4*(3-1)
-    nlarge = (nrows+1)/2 = 5 (large = 3 nums)
-    nsmall = (nrows-1)/2 = 4 (small = 2 nums)
-ntiles = 5*3 + 4*2 = 23
-
-def make_idx_mapping()
-(only used when printing..?)
-
-Actual indices:
-       01
-    03    04
- 05    06    07
-    08    09
- 10    11    12
-    13    14
- 15    16    17
-    18    19
-       21
-
-Effective indices:
-       00
-    01    02
- 03    04    05
-    06    07
- 08    09    10
-    11    12
- 13    14    15
-    16    17
-       18
-
-adjacent tile indexing:
-      /0 \
-   /5 \__/1 \
-   \__/b \__/
-   /4 \__/2
-      /3 \
+    13  15  18
+  11   4   6  17
+ 9   2   0   5  16
+   8   1   3  14
+     7  10  12
 
 Organization:
 Current state of game is stored as a "sparse array"
@@ -184,7 +140,7 @@ class Board(HexBoard):
         #TODO
         return
     
-    def printboard(self):
+    def print(self):
         expected_vals = np.zeros(self.ntiles)
         for idx in self.states:
             p = abs(self.states[idx])**2
@@ -192,4 +148,4 @@ class Board(HexBoard):
             for i in range(self.ntiles):
                 if bits[i] == 1:
                     expected_vals[i] += p
-        self.print((lambda i : '{:.3}'.format(expected_vals[i])))
+        super().print((lambda i : '{:.3}'.format(expected_vals[i])))
