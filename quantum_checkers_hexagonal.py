@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.lib.function_base import _calculate_shapes
 
 from gates import *
 from game_utils.hex_board import HexBoard
@@ -13,8 +14,11 @@ An "attack" can be thought of as a CNOT gate - Player 0 attacking a player 1 til
 essentially says "if bit A is in state 0, flip bit B"
 
 IDEA: you can unlock different gate operations
-- CNOT: if tile A, then swap tile B
-- 
+- CNOT
+- Cphase?
+- SWAP
+- etc
+IDEA: each player has a "hand" of a few different gates, they can use a couple per turn
 
 Can do 2-3 moves per turn?
 
@@ -44,11 +48,14 @@ board indexing (size=3):
      7  10  12
 
 Organization:
+In quantum mechanics terms, the game is in a superposition of 2^ntiles-1 possible states, each of
+which has a "probability amplitude" that is related to the probability of that particular
+state being observed when the board is "measured". 
 Current state of game is stored as a "sparse array"
 e.g. if the current state is 1/sqrt(2) (|0000...00> - |1111...11>) then
 the state is a list of length 2 containing the tuples (0, 1/sqrt(2)) and (2^n-1, -1/sqrt(2)).
 The first number is the state index (which tells us the value of each tile on the board)
-and the second number is the coefficient, which can be complex.
+and the second number is the probability amplitude, which can be complex.
 Operations are essentially unitary matrices on the entire space, but are treated as
 a series of conditionals in the code. CNOT(0, 1) is a CNOT gate with the 0 tile as control
 and the 1 tile as target. It will search through the game state list, and any tiles that have
@@ -117,17 +124,27 @@ class Board(HexBoard):
         else:
             self.states[idx] = amp
 
+    def prunestates(self):
+        states_to_rm = []
+        for idx in self.states:
+            amp = self.states[idx]
+            if abs(amp) < 1e-15:
+                states_to_rm.append(idx)
+        for idx in states_to_rm:
+            self.popstate(idx)
+
     def onebitgate(self, target, gate):
+        # TODO: use gate class instead of matrices
         states_to_rm = []
         states_to_add = []
         for idx in self.states:
             bits = self.bits_from_state_idx(idx)
             amp = self.states[idx]
-            tgt = bits[target]
+            bit = bits[target]
             newbits0 = np.concatenate((bits[:target], [0], bits[target+1:]))
-            amp0 = gate[0,tgt] * amp
+            amp0 = gate[0,bit] * amp
             newbits1 = np.concatenate((bits[:target], [1], bits[target+1:]))
-            amp1 = gate[1,tgt] * amp
+            amp1 = gate[1,bit] * amp
             states_to_rm.append(idx)
             states_to_add.append((self.state_idx_from_bits(newbits0), amp0))
             states_to_add.append((self.state_idx_from_bits(newbits1), amp1))
@@ -135,12 +152,39 @@ class Board(HexBoard):
             self.popstate(idx)
         for (idx,amp) in states_to_add:
             self.addstate(idx,amp)
+        self.prunestates()
 
-    def twobitgate(self, control, target, gate):
-        #TODO
-        return
+    def twobitgate(self, tgtA, tgtB, gate):
+        # return False if invalid gate, else True
+        # TODO: use Gate class instead of matrices
+        if tgtB not in self.get_adjacent_idxs(tgtA):
+            return False
+        if tgtA > tgtB:
+            tgt1 = tgtB
+            tgt2 = tgtA
+        else:
+            tgt1 = tgtA
+            tgt2 = tgtB
+        states_to_rm = []
+        states_to_add = []
+        for idx in self.states:
+            bits = self.bits_from_state_idx(idx)
+            amp = self.states[idx]
+            bitA = bits[tgtA]
+            bitB = bits[tgtB]
+            for newA,newB in [[0,0],[0,1],[1,0],[1,1]]:
+                newbits = np.concatenate((bits[:tgt1], [newA], bits[tgt1+1:tgt2], [newB], bits[tgt2+1:]))
+                newamp = gate[2*newA+newB, 2*bitA+bitB] * amp
+                states_to_add.append((self.state_idx_from_bits(newbits), newamp))
+            states_to_rm.append(idx)
+        for idx in states_to_rm:
+            self.popstate(idx)
+        for (idx,amp) in states_to_add:
+            self.addstate(idx,amp)
+        self.prunestates()
+        return True
     
-    def print(self):
+    def calc_expect(self):
         expected_vals = np.zeros(self.ntiles)
         for idx in self.states:
             p = abs(self.states[idx])**2
@@ -148,4 +192,51 @@ class Board(HexBoard):
             for i in range(self.ntiles):
                 if bits[i] == 1:
                     expected_vals[i] += p
+        return expected_vals
+
+    def print(self):
+        expected_vals = self.calc_expect()
         super().print((lambda i : '{:.3}'.format(expected_vals[i])))
+
+class Player():
+    def __init__(self, playernum, handsize=5):
+        self.playernum = playernum
+        self.handsize = handsize
+        # TODO
+
+class QGame():
+    def __init__(self, size=3, handsize=5, ops_per_turn=3, win_threshold=0.9):
+        self.board = Board(size)
+        self.score = 0
+        self.deck = self.populate_deck()
+        self.params = {"handsize" : 5,
+                       "ops_per_turn" : 3,
+                       "win_threshold" : 0.9}
+    
+    def populate_deck(self, preset=None):
+        # TODO
+        # make a deck of allowed gates that players draw their hand from
+        pass
+
+    def calc_score(self):
+        # if sum of tiles is 0, player 0 wins, if 1 then player 1 wins
+        expected_vals = self.board.calc_expect()
+        p1_score = sum(expected_vals) / self.board.ntiles
+        p2_score = 1 - p1_score
+        return (p1_score, p2_score)
+
+    def measure(self):
+        # TODO
+        # measures the board, picking a single possible state
+        # TODO: can players do this during the game?
+        pass
+
+    def do_turn(self, player):
+        # TODO
+        # one player does a turn (uses `ops_per_turn` number of gates on the board)
+        pass
+
+    def play(self):
+        # TODO
+        # loop of player turns until there is a winner
+        pass
