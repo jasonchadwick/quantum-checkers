@@ -11,6 +11,8 @@ The winner is the first to drop their opponent's total probability score below 1
 A hexagonal-grid board where each tile has a value between 0 and 1. Player 0 wins if the average of all tiles gets close enough to 0, and player 1 wins if the average is close
 enough to 1. See the file for more info.
 
+UPDATE: this is now hosted separately at https://github.com/jasonchadwick/quops-game
+
 ### Todo (hex game)
 
 - 2-bit gates
